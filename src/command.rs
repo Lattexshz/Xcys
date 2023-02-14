@@ -1,7 +1,7 @@
-use std::process::Stdio;
+use crate::error::{CommandParseError, ErrorKind};
 use futures::io::BufReader;
 use futures::{AsyncBufReadExt, StreamExt};
-use crate::error::{CommandParseError, ErrorKind};
+use std::process::Stdio;
 
 pub struct ParsedCommand {
     pub command: String,
@@ -26,7 +26,8 @@ impl ParsedCommand {
             .arg(&self.subcommand)
             .args(self.flags.as_slice())
             .stdout(Stdio::piped())
-            .spawn().unwrap();
+            .spawn()
+            .unwrap();
 
         let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
 
@@ -36,18 +37,18 @@ impl ParsedCommand {
     }
 }
 
-pub fn parse_command(original:&str) -> Result<ParsedCommand,CommandParseError> {
-    let command:String;
-    let mut subcommand:String = String::from("");
-    let mut flags:Vec<String> = vec![];
+pub fn parse_command(original: &str) -> Result<ParsedCommand, CommandParseError> {
+    let command: String;
+    let mut subcommand: String = String::from("");
+    let mut flags: Vec<String> = vec![];
 
-    let divided:Vec<&str> = original.split_ascii_whitespace().collect();
+    let divided: Vec<&str> = original.split_ascii_whitespace().collect();
 
     let len = divided.len();
 
     if len == 0 {
         return Err(CommandParseError::simple(ErrorKind::Null));
-    }else {
+    } else {
         command = divided[0].parse().unwrap();
     }
 
@@ -59,7 +60,7 @@ pub fn parse_command(original:&str) -> Result<ParsedCommand,CommandParseError> {
     for i in divided {
         if flags_counted == true {
             flags.push(i.parse().unwrap());
-        }else {
+        } else {
             if i.chars().next().unwrap() == '-' {
                 flags.push(i.parse().unwrap());
                 flags_counted = true;
@@ -67,6 +68,5 @@ pub fn parse_command(original:&str) -> Result<ParsedCommand,CommandParseError> {
         }
     }
 
-
-    Ok(ParsedCommand::new(command,subcommand,flags))
+    Ok(ParsedCommand::new(command, subcommand, flags))
 }

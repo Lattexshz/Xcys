@@ -11,6 +11,8 @@ use std::{io::stdout, time::Duration};
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
 
+use crate::command::{parse_command, ParsedCommand};
+use crate::error::CommandParseError;
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
 use crossterm::style::*;
 use crossterm::{
@@ -20,8 +22,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
-use crate::command::{parse_command, ParsedCommand};
-use crate::error::CommandParseError;
+use crossterm::terminal::*;
 
 fn shell_loop() {
     let mut reader = EventStream::new();
@@ -42,9 +43,11 @@ fn shell_loop() {
         .unwrap();
         execute!(stdout(), Print("$ "));
         let mut input = String::from("");
+        let mut screen_size = crossterm::terminal::size().unwrap();
+        let y = crossterm::cursor::position().unwrap().1;
         'input: loop {
-
             let event = read().unwrap();
+
             match event {
                 Event::FocusGained => {}
 
@@ -56,74 +59,102 @@ fn shell_loop() {
                         modifiers,
                         kind,
                         state,
-                    } => match code {
-                        KeyCode::Backspace => {}
-                        KeyCode::Enter => {
-                            match kind {
-                                KeyEventKind::Press => {}
-                                KeyEventKind::Repeat => {}
-                                KeyEventKind::Release => {
-                                    let command = match parse_command(&input) {
-                                        Ok(c) => c,
-                                        Err(_) => break 'input
-                                    };
-                                    command.run();
-                                    input.clear();
-                                    break 'input;
-                                }
-                            }
-                        }
-                        KeyCode::Left => {}
-                        KeyCode::Right => {}
-                        KeyCode::Up => {}
-                        KeyCode::Down => {}
-                        KeyCode::Home => {}
-                        KeyCode::End => {}
-                        KeyCode::PageUp => {}
-                        KeyCode::PageDown => {}
-                        KeyCode::Tab => {}
-                        KeyCode::BackTab => {}
-                        KeyCode::Delete => {}
-                        KeyCode::Insert => {
-                            break;
-                        }
-                        KeyCode::F(_) => {}
-                        KeyCode::Char(c) => {
-                            {
-                                // Case insensitivity
-                                let c = c.to_ascii_lowercase();
-                                if modifiers == KeyModifiers::CONTROL {
-                                    match c {
-                                        'c' => {
-                                            std::process::exit(0);
-                                        }
+                    } => {
 
-                                        _ => {}
+                        if kind == KeyEventKind::Release {
+                            match code {
+                                KeyCode::Backspace => {
+                                    if !input.is_empty() {
+                                        input.remove(input.len() - 1);
+
+                                        // Move
+                                        let pos = crossterm::cursor::position().unwrap();
+                                        if pos.0 == 0 && pos.1 != y {
+                                            execute!(
+                                                        stdout(),
+                                                        crossterm::cursor::MoveTo(
+                                                            screen_size.0,
+                                                            pos.1 - 1
+                                                        )
+                                                    )
+                                                .unwrap();
+                                            continue;
+                                        } else if pos.0 == 2 && pos.1 == y {
+                                            continue;
+                                        }
+                                        execute!(stdout(), crossterm::cursor::MoveLeft(1))
+                                            .unwrap();
+
+                                        execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown))
+                                            .unwrap();
                                     }
                                 }
-                            }
-
-                            match kind {
-                                KeyEventKind::Press => {}
-                                KeyEventKind::Repeat => {}
-                                KeyEventKind::Release => {
-                                    input.push(c);
-                                    queue!(stdout(), Print(c)).unwrap();
+                                KeyCode::Enter => match kind {
+                                    KeyEventKind::Press => {}
+                                    KeyEventKind::Repeat => {}
+                                    KeyEventKind::Release => {
+                                        let command = match parse_command(&input) {
+                                            Ok(c) => c,
+                                            Err(_) => break 'input,
+                                        };
+                                        command.run();
+                                        input.clear();
+                                        break 'input;
+                                    }
+                                },
+                                KeyCode::Left => {}
+                                KeyCode::Right => {}
+                                KeyCode::Up => {}
+                                KeyCode::Down => {}
+                                KeyCode::Home => {}
+                                KeyCode::End => {}
+                                KeyCode::PageUp => {}
+                                KeyCode::PageDown => {}
+                                KeyCode::Tab => {}
+                                KeyCode::BackTab => {}
+                                KeyCode::Delete => {}
+                                KeyCode::Insert => {
+                                    break;
                                 }
+                                KeyCode::F(_) => {}
+                                KeyCode::Char(c) => {
+                                    {
+                                        // Case insensitivity
+                                        let c = c.to_ascii_lowercase();
+                                        if modifiers == KeyModifiers::CONTROL {
+                                            match c {
+                                                'c' => {
+                                                    std::process::exit(0);
+                                                }
+
+                                                _ => {}
+                                            }
+                                        }
+                                    }
+
+                                    match kind {
+                                        KeyEventKind::Press => {}
+                                        KeyEventKind::Repeat => {}
+                                        KeyEventKind::Release => {
+                                            input.push(c);
+                                            highlight(&mut input);
+                                        }
+                                    }
+                                    flush();
+                                }
+                                KeyCode::Null => {}
+                                KeyCode::Esc => {}
+                                KeyCode::CapsLock => {}
+                                KeyCode::ScrollLock => {}
+                                KeyCode::NumLock => {}
+                                KeyCode::PrintScreen => {}
+                                KeyCode::Menu => {}
+                                KeyCode::KeypadBegin => {}
+                                KeyCode::Pause => {}
+                                KeyCode::Media(_) => {}
+                                KeyCode::Modifier(_) => {}
                             }
-                            flush();
                         }
-                        KeyCode::Null => {}
-                        KeyCode::Esc => {}
-                        KeyCode::CapsLock => {}
-                        KeyCode::ScrollLock => {}
-                        KeyCode::NumLock => {}
-                        KeyCode::PrintScreen => {}
-                        KeyCode::Menu => {}
-                        KeyCode::KeypadBegin => {}
-                        KeyCode::Pause => {}
-                        KeyCode::Media(_) => {}
-                        KeyCode::Modifier(_) => {}
                     },
                 },
 
@@ -226,7 +257,13 @@ fn main() -> Result<()> {
     disable_raw_mode()
 }
 
-fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEventState,input:&mut String) {
+fn match_char(
+    c: char,
+    modifier: KeyModifiers,
+    kind: KeyEventKind,
+    state: KeyEventState,
+    input: &mut String,
+) {
     // Change the operation according to the Modifier
     {
         // Case insensitivity
@@ -247,12 +284,49 @@ fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEve
         KeyEventKind::Repeat => {}
         KeyEventKind::Release => {
             input.push(c);
-            queue!(stdout(), Print(c)).unwrap();
+            highlight(input);
         }
     }
 }
 
-fn trans_async() {}
+fn highlight(input: &mut String) {
+    let vec: Vec<char> = input.chars().collect();
+    let pos = crossterm::cursor::position().unwrap();
+    use crossterm::cursor::MoveTo;
+    queue!(stdout(), MoveTo(2,pos.1),Clear(ClearType::FromCursorDown)).unwrap();
+
+    let mut status = 0;
+
+    for i in vec {
+        match i {
+            '"' => {
+                if status == 1 {
+                    status = 0;
+                } else {
+                    status = 1;
+                }
+                queue!(
+                    stdout(),
+                    SetForegroundColor(Color::Green),
+                    Print(i),
+                    ResetColor
+                )
+                .unwrap();
+            }
+
+            _ => match status {
+                1 => queue!(
+                    stdout(),
+                    SetForegroundColor(Color::Green),
+                    Print(i),
+                    ResetColor
+                )
+                .unwrap(),
+                _ => queue!(stdout(), Print(i)).unwrap(),
+            },
+        }
+    }
+}
 
 fn flush() {
     stdout().flush().unwrap();
@@ -262,7 +336,10 @@ mod test {
     #[test]
     fn parse_command() {
         let command = crate::command::parse_command("cargo check").unwrap();
-        println!("{} {} {:?}",command.command,command.subcommand,command.flags);
+        println!(
+            "{} {} {:?}",
+            command.command, command.subcommand, command.flags
+        );
         command.run();
     }
 }

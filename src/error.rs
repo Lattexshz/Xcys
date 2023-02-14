@@ -3,13 +3,13 @@ use std::fmt;
 
 #[derive(Clone)]
 pub enum ErrorKind {
-    Null
+    Null,
 }
 
 impl ErrorKind {
     pub fn description(&self) -> &'static str {
         match self {
-            ErrorKind::Null => "No command has been entered."
+            ErrorKind::Null => "No command has been entered.",
         }
     }
 }
@@ -20,15 +20,17 @@ pub struct CommandParseError {
 
 impl CommandParseError {
     pub fn new<E>(kind: ErrorKind, error: E) -> Self
-        where
-            E: Into<Box<dyn error::Error + Send + Sync>>
+    where
+        E: Into<Box<dyn error::Error + Send + Sync>>,
     {
-        CommandParseError { _error: _CommandParseError::Custom((kind, error.into())) }
+        CommandParseError {
+            _error: _CommandParseError::Custom((kind, error.into())),
+        }
     }
 
     pub fn simple(kind: ErrorKind) -> Self {
         CommandParseError {
-            _error: _CommandParseError::Simple(kind)
+            _error: _CommandParseError::Simple(kind),
         }
     }
 
@@ -41,8 +43,8 @@ impl CommandParseError {
 }
 
 enum _CommandParseError {
-    Simple( ErrorKind ),
-    Custom( (ErrorKind, Box<dyn error::Error + Send + Sync>) ),
+    Simple(ErrorKind),
+    Custom((ErrorKind, Box<dyn error::Error + Send + Sync>)),
 }
 
 impl fmt::Display for CommandParseError {
