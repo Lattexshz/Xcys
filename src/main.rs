@@ -15,6 +15,7 @@ use crate::command::{parse_command, ParsedCommand};
 use crate::error::CommandParseError;
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
 use crossterm::style::*;
+use crossterm::terminal::*;
 use crossterm::{
     cursor::position,
     event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent},
@@ -22,7 +23,6 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
-use crossterm::terminal::*;
 
 fn shell_loop() {
     let mut reader = EventStream::new();
@@ -60,7 +60,6 @@ fn shell_loop() {
                         kind,
                         state,
                     } => {
-
                         if kind == KeyEventKind::Release {
                             match code {
                                 KeyCode::Backspace => {
@@ -71,22 +70,23 @@ fn shell_loop() {
                                         let pos = crossterm::cursor::position().unwrap();
                                         if pos.0 == 0 && pos.1 != y {
                                             execute!(
-                                                        stdout(),
-                                                        crossterm::cursor::MoveTo(
-                                                            screen_size.0,
-                                                            pos.1 - 1
-                                                        )
-                                                    )
-                                                .unwrap();
+                                                stdout(),
+                                                crossterm::cursor::MoveTo(screen_size.0, pos.1 - 1)
+                                            )
+                                            .unwrap();
                                             continue;
                                         } else if pos.0 == 2 && pos.1 == y {
                                             continue;
                                         }
-                                        execute!(stdout(), crossterm::cursor::MoveLeft(1))
-                                            .unwrap();
+                                        execute!(stdout(), crossterm::cursor::MoveLeft(1)).unwrap();
 
-                                        execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown))
-                                            .unwrap();
+                                        execute!(
+                                            stdout(),
+                                            crossterm::terminal::Clear(
+                                                crossterm::terminal::ClearType::FromCursorDown
+                                            )
+                                        )
+                                        .unwrap();
                                     }
                                 }
                                 KeyCode::Enter => match kind {
@@ -155,7 +155,7 @@ fn shell_loop() {
                                 KeyCode::Modifier(_) => {}
                             }
                         }
-                    },
+                    }
                 },
 
                 Event::Mouse(_) => {}
@@ -293,38 +293,63 @@ fn highlight(input: &mut String) {
     let vec: Vec<char> = input.chars().collect();
     let pos = crossterm::cursor::position().unwrap();
     use crossterm::cursor::MoveTo;
-    queue!(stdout(), MoveTo(2,pos.1),Clear(ClearType::FromCursorDown)).unwrap();
+    queue!(stdout(), MoveTo(2, pos.1), Clear(ClearType::FromCursorDown)).unwrap();
 
+    // 0: Command
+    // 1: Sub Command
+    // 2: String
+    // 3: Flags
     let mut status = 0;
 
     for i in vec {
         match i {
             '"' => {
-                if status == 1 {
+                if status == 2 {
                     status = 0;
                 } else {
+                    status = 2;
+                }
+            }
+
+            '-' => {
+                if status != 2 {
+                    status = 3;
+                }
+            }
+
+            ' ' => {
+                if status != 2 {
                     status = 1;
                 }
-                queue!(
+            }
+
+            _ => {}
+        }
+
+        match status {
+            1 => queue!(
                     stdout(),
-                    SetForegroundColor(Color::Green),
+                    SetForegroundColor(Color::White),
                     Print(i),
                     ResetColor
                 )
-                .unwrap();
-            }
+                .unwrap(),
 
-            _ => match status {
-                1 => queue!(
+            2 => queue!(
                     stdout(),
                     SetForegroundColor(Color::Green),
                     Print(i),
                     ResetColor
                 )
                 .unwrap(),
-                _ => queue!(stdout(), Print(i)).unwrap(),
-            },
-        }
+            3 => queue!(
+                    stdout(),
+                    SetForegroundColor(Color::DarkGrey),
+                    Print(i),
+                    ResetColor
+                ).unwrap(),
+            _ => queue!(stdout(), SetForegroundColor(Color::Yellow),Print(i),ResetColor).unwrap(),
+        };
     }
 }
 
