@@ -93,6 +93,7 @@ fn shell_loop() {
                                     KeyEventKind::Press => {}
                                     KeyEventKind::Repeat => {}
                                     KeyEventKind::Release => {
+                                        println!();
                                         let command = match parse_command(&input) {
                                             Ok(c) => c,
                                             Err(_) => break 'input,
@@ -248,11 +249,11 @@ fn main() -> Result<()> {
     enable_raw_mode()?;
 
     let mut stdout = stdout();
-    execute!(stdout, EnableMouseCapture)?;
+    //execute!(stdout, EnableMouseCapture)?;
 
     shell_loop();
 
-    execute!(stdout, DisableMouseCapture)?;
+    //execute!(stdout, DisableMouseCapture)?;
 
     disable_raw_mode()
 }
@@ -301,14 +302,16 @@ fn highlight(input: &mut String) {
     // 3: Flags
     let mut status = 0;
 
+    let mut use_temp = false;
+    let mut temp = 0;
+
+    let mut d_quotation_count = 0;
+
     for i in vec {
         match i {
             '"' => {
-                if status == 2 {
-                    status = 0;
-                } else {
-                    status = 2;
-                }
+                status = 2;
+                d_quotation_count += 1
             }
 
             '-' => {
@@ -350,6 +353,10 @@ fn highlight(input: &mut String) {
                 ).unwrap(),
             _ => queue!(stdout(), SetForegroundColor(Color::Yellow),Print(i),ResetColor).unwrap(),
         };
+        if d_quotation_count == 2 && status == 2 {
+            status = 1;
+            d_quotation_count = 0;
+        }
     }
 }
 
