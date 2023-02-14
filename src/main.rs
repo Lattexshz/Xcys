@@ -2,15 +2,24 @@
 //!
 //! cargo run --features="event-stream" --example event-stream-tokio
 
-use std::{io::stdout, time::Duration};
+mod command;
+mod error;
+
 use std::io::Write;
+use std::{io::stdout, time::Duration};
 
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
 
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
-use crossterm::{cursor::position, event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent}, execute, terminal::{disable_raw_mode, enable_raw_mode}, Result, queue};
 use crossterm::style::*;
+use crossterm::{
+    cursor::position,
+    event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent},
+    execute, queue,
+    terminal::{disable_raw_mode, enable_raw_mode},
+    Result,
+};
 
 async fn shell_loop() {
     let mut reader = EventStream::new();
@@ -27,14 +36,10 @@ async fn shell_loop() {
             Print(std::env::current_dir().unwrap().to_str().unwrap()),
             Print("\n"),
             ResetColor
-        ).unwrap();
-        execute!(
-            stdout(),
-            Print("$ ")
-        );
+        )
+        .unwrap();
+        execute!(stdout(), Print("$ "));
         'input: loop {
-
-
             let event = read().unwrap();
             match event {
                 Event::FocusGained => {}
@@ -201,20 +206,21 @@ fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEve
         KeyEventKind::Press => {}
         KeyEventKind::Repeat => {}
         KeyEventKind::Release => {
-            queue!(
-        stdout(),
-        Print(c)
-    ).unwrap();
+            queue!(stdout(), Print(c)).unwrap();
         }
     }
-
-
 }
 
-fn trans_async() {
-
-}
+fn trans_async() {}
 
 fn flush() {
     stdout().flush().unwrap();
+}
+
+mod test {
+    #[test]
+    fn parse_command() {
+        let command = crate::command::parse_command("cmake build --build build").unwrap();
+        println!("{} {} {:?}",command.command,command.subcommand,command.flags);
+    }
 }
