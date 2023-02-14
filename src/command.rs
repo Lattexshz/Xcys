@@ -58,10 +58,10 @@ pub fn parse_command(original: &str) -> Result<ParsedCommand, CommandParseError>
 
     let mut flags_counted = false;
     for i in divided {
-        if flags_counted == true {
+        if flags_counted {
             flags.push(i.parse().unwrap());
         } else {
-            if i.chars().next().unwrap() == '-' {
+            if i.starts_with('-') {
                 flags.push(i.parse().unwrap());
                 flags_counted = true;
             }

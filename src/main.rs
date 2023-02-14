@@ -41,7 +41,7 @@ fn shell_loop() {
             ResetColor
         )
         .unwrap();
-        execute!(stdout(), Print("$ "));
+        execute!(stdout(), Print("$ ")).unwrap();
         let mut input = String::from("");
         let mut screen_size = crossterm::terminal::size().unwrap();
         let y = crossterm::cursor::position().unwrap().1;
@@ -290,7 +290,7 @@ fn match_char(
     }
 }
 
-fn highlight(input: &mut String) {
+fn highlight(input: &mut str) {
     let vec: Vec<char> = input.chars().collect();
     let pos = crossterm::cursor::position().unwrap();
     use crossterm::cursor::MoveTo;
@@ -331,27 +331,34 @@ fn highlight(input: &mut String) {
 
         match status {
             1 => queue!(
-                    stdout(),
-                    SetForegroundColor(Color::White),
-                    Print(i),
-                    ResetColor
-                )
-                .unwrap(),
+                stdout(),
+                SetForegroundColor(Color::White),
+                Print(i),
+                ResetColor
+            )
+            .unwrap(),
 
             2 => queue!(
-                    stdout(),
-                    SetForegroundColor(Color::Green),
-                    Print(i),
-                    ResetColor
-                )
-                .unwrap(),
+                stdout(),
+                SetForegroundColor(Color::Green),
+                Print(i),
+                ResetColor
+            )
+            .unwrap(),
             3 => queue!(
-                    stdout(),
-                    SetForegroundColor(Color::DarkGrey),
-                    Print(i),
-                    ResetColor
-                ).unwrap(),
-            _ => queue!(stdout(), SetForegroundColor(Color::Yellow),Print(i),ResetColor).unwrap(),
+                stdout(),
+                SetForegroundColor(Color::DarkGrey),
+                Print(i),
+                ResetColor
+            )
+            .unwrap(),
+            _ => queue!(
+                stdout(),
+                SetForegroundColor(Color::Yellow),
+                Print(i),
+                ResetColor
+            )
+            .unwrap(),
         };
         if d_quotation_count == 2 && status == 2 {
             status = 1;
