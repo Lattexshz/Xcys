@@ -1,3 +1,6 @@
+use std::process::Stdio;
+use futures::io::BufReader;
+use futures::{AsyncBufReadExt, StreamExt};
 use crate::error::{CommandParseError, ErrorKind};
 
 pub struct ParsedCommand {
@@ -16,7 +19,21 @@ impl ParsedCommand {
         }
     }
 
-    pub fn run(&self) {}
+    #[tokio::main]
+    pub async fn run(&self) {
+        use async_process::Command;
+        let mut child = Command::new(&self.command)
+            .arg(&self.subcommand)
+            .args(self.flags.as_slice())
+            .stdout(Stdio::piped())
+            .spawn().unwrap();
+
+        let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+
+        while let Some(line) = lines.next().await {
+            println!("{}", line.unwrap());
+        }
+    }
 }
 
 pub fn parse_command(original:&str) -> Result<ParsedCommand,CommandParseError> {

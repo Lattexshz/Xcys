@@ -20,8 +20,10 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
+use crate::command::{parse_command, ParsedCommand};
+use crate::error::CommandParseError;
 
-async fn shell_loop() {
+fn shell_loop() {
     let mut reader = EventStream::new();
 
     loop {
@@ -39,7 +41,9 @@ async fn shell_loop() {
         )
         .unwrap();
         execute!(stdout(), Print("$ "));
+        let mut input = String::from("");
         'input: loop {
+
             let event = read().unwrap();
             match event {
                 Event::FocusGained => {}
@@ -54,7 +58,21 @@ async fn shell_loop() {
                         state,
                     } => match code {
                         KeyCode::Backspace => {}
-                        KeyCode::Enter => {}
+                        KeyCode::Enter => {
+                            match kind {
+                                KeyEventKind::Press => {}
+                                KeyEventKind::Repeat => {}
+                                KeyEventKind::Release => {
+                                    let command = match parse_command(&input) {
+                                        Ok(c) => c,
+                                        Err(_) => break 'input
+                                    };
+                                    command.run();
+                                    input.clear();
+                                    break 'input;
+                                }
+                            }
+                        }
                         KeyCode::Left => {}
                         KeyCode::Right => {}
                         KeyCode::Up => {}
@@ -71,7 +89,28 @@ async fn shell_loop() {
                         }
                         KeyCode::F(_) => {}
                         KeyCode::Char(c) => {
-                            match_char(c, modifiers, kind, state);
+                            {
+                                // Case insensitivity
+                                let c = c.to_ascii_lowercase();
+                                if modifiers == KeyModifiers::CONTROL {
+                                    match c {
+                                        'c' => {
+                                            std::process::exit(0);
+                                        }
+
+                                        _ => {}
+                                    }
+                                }
+                            }
+
+                            match kind {
+                                KeyEventKind::Press => {}
+                                KeyEventKind::Repeat => {}
+                                KeyEventKind::Release => {
+                                    input.push(c);
+                                    queue!(stdout(), Print(c)).unwrap();
+                                }
+                            }
                             flush();
                         }
                         KeyCode::Null => {}
@@ -95,6 +134,8 @@ async fn shell_loop() {
                 Event::Resize(_, _) => {}
             }
         }
+        println!();
+        println!();
 
         // let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
         // let mut event = reader.next().fuse();
@@ -172,21 +213,20 @@ async fn shell_loop() {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     enable_raw_mode()?;
 
     let mut stdout = stdout();
     execute!(stdout, EnableMouseCapture)?;
 
-    shell_loop().await;
+    shell_loop();
 
     execute!(stdout, DisableMouseCapture)?;
 
     disable_raw_mode()
 }
 
-fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEventState) {
+fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEventState,input:&mut String) {
     // Change the operation according to the Modifier
     {
         // Case insensitivity
@@ -206,6 +246,7 @@ fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEve
         KeyEventKind::Press => {}
         KeyEventKind::Repeat => {}
         KeyEventKind::Release => {
+            input.push(c);
             queue!(stdout(), Print(c)).unwrap();
         }
     }
@@ -220,7 +261,8 @@ fn flush() {
 mod test {
     #[test]
     fn parse_command() {
-        let command = crate::command::parse_command("cmake build --build build").unwrap();
+        let command = crate::command::parse_command("cargo check").unwrap();
         println!("{} {} {:?}",command.command,command.subcommand,command.flags);
+        command.run();
     }
 }
