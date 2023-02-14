@@ -1,89 +1,220 @@
-//! Demonstrates how to read events asynchronously with async-std.
+//! Demonstrates how to read events asynchronously with tokio.
 //!
-//! cargo run --features="event-stream" --example event-stream-async-std
+//! cargo run --features="event-stream" --example event-stream-tokio
 
 use std::{io::stdout, time::Duration};
+use std::io::Write;
 
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
 
-use crossterm::{
-    cursor::position,
-    event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode},
-    Result,
-};
+use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
+use crossterm::{cursor::position, event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent}, execute, terminal::{disable_raw_mode, enable_raw_mode}, Result, queue};
+use crossterm::style::*;
 
-const HELP: &str = r#"EventStream based on futures_util::stream::Stream with async-std
- - Keyboard, mouse and terminal resize events enabled
- - Prints "." every second if there's no event
- - Hit "c" to print current cursor position
- - Use Esc to quit
-"#;
-
-async fn print_events() {
+async fn shell_loop() {
     let mut reader = EventStream::new();
 
     loop {
-        let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
-        let mut event = reader.next().fuse();
+        execute!(
+            stdout(),
+            SetForegroundColor(Color::Green),
+            Print(whoami::username()),
+            Print("@"),
+            Print(whoami::devicename()),
+            SetForegroundColor(Color::Yellow),
+            Print(" "),
+            Print(std::env::current_dir().unwrap().to_str().unwrap()),
+            Print("\n"),
+            ResetColor
+        ).unwrap();
+        execute!(
+            stdout(),
+            Print("$ ")
+        );
+        'input: loop {
 
-        select! {
-            maybe_event = event => {
-                match maybe_event {
-                    Some(Ok(event)) => {
-                        match event {
-                            Event::FocusGained => {
 
-                            }
+            let event = read().unwrap();
+            match event {
+                Event::FocusGained => {}
 
-                            Event::FocusLost => {
+                Event::FocusLost => {}
 
-                            }
-
-                            Event::Key(k) => {
-                                match k {
-                                    _ => {
-                                        
-                                    }
-                                }
-                            }
-
-                            Event::Mouse(_) => {
-
-                            }
-
-                            Event::Paste(_) => {
-
-                            }
-
-                            Event::Resize(_,_) => {
-
-                            }
-                        }
-
-                        if event == Event::Key(KeyCode::Char('c').into()) {
-                            println!("Cursor position: {:?}\r", position());
-                        }
-
-                        if event == Event::Key(KeyCode::Esc.into()) {
+                Event::Key(key) => match key {
+                    KeyEvent {
+                        code,
+                        modifiers,
+                        kind,
+                        state,
+                    } => match code {
+                        KeyCode::Backspace => {}
+                        KeyCode::Enter => {}
+                        KeyCode::Left => {}
+                        KeyCode::Right => {}
+                        KeyCode::Up => {}
+                        KeyCode::Down => {}
+                        KeyCode::Home => {}
+                        KeyCode::End => {}
+                        KeyCode::PageUp => {}
+                        KeyCode::PageDown => {}
+                        KeyCode::Tab => {}
+                        KeyCode::BackTab => {}
+                        KeyCode::Delete => {}
+                        KeyCode::Insert => {
                             break;
                         }
-                    }
-                    Some(Err(e)) => println!("Error: {:?}\r", e),
-                    None => break,
-                }
+                        KeyCode::F(_) => {}
+                        KeyCode::Char(c) => {
+                            match_char(c, modifiers, kind, state);
+                            flush();
+                        }
+                        KeyCode::Null => {}
+                        KeyCode::Esc => {}
+                        KeyCode::CapsLock => {}
+                        KeyCode::ScrollLock => {}
+                        KeyCode::NumLock => {}
+                        KeyCode::PrintScreen => {}
+                        KeyCode::Menu => {}
+                        KeyCode::KeypadBegin => {}
+                        KeyCode::Pause => {}
+                        KeyCode::Media(_) => {}
+                        KeyCode::Modifier(_) => {}
+                    },
+                },
+
+                Event::Mouse(_) => {}
+
+                Event::Paste(_) => {}
+
+                Event::Resize(_, _) => {}
             }
-        };
+        }
+
+        // let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
+        // let mut event = reader.next().fuse();
+        //
+        //     select! {
+        //     //_ = delay => { println!(".\r"); },
+        //     maybe_event = event => {
+        //         match maybe_event {
+        //             Some(Ok(event)) => {
+        //                 match event {
+        //                     Event::FocusGained => {
+        //
+        //                     }
+        //
+        //                     Event::FocusLost => {
+        //
+        //                     }
+        //
+        //                     Event::Key(key) => {
+        //                         match key {
+        //                             KeyEvent {code,modifiers,kind,state} => {
+        //                                 match code {
+        //                                     KeyCode::Backspace => {},
+        //                                     KeyCode::Enter => {},
+        //                                     KeyCode::Left => {},
+        //                                     KeyCode::Right => {},
+        //                                     KeyCode::Up => {},
+        //                                     KeyCode::Down => {},
+        //                                     KeyCode::Home => {},
+        //                                     KeyCode::End => {},
+        //                                     KeyCode::PageUp => {},
+        //                                     KeyCode::PageDown => {},
+        //                                     KeyCode::Tab => {},
+        //                                     KeyCode::BackTab => {},
+        //                                     KeyCode::Delete => {},
+        //                                     KeyCode::Insert => {break;},
+        //                                     KeyCode::F(_) => {},
+        //                                     KeyCode::Char(c) => {
+        //                                         match_char(c,modifiers,kind,state);
+        //                                     },
+        //                                     KeyCode::Null => {},
+        //                                     KeyCode::Esc => {},
+        //                                     KeyCode::CapsLock => {},
+        //                                     KeyCode::ScrollLock => {},
+        //                                     KeyCode::NumLock => {},
+        //                                     KeyCode::PrintScreen => {},
+        //                                     KeyCode::Menu => {},
+        //                                     KeyCode::KeypadBegin => {},
+        //                                     KeyCode::Pause => {},
+        //                                     KeyCode::Media(_) => {},
+        //                                     KeyCode::Modifier(_) => {},
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //
+        //                     Event::Mouse(_) => {
+        //
+        //                     }
+        //
+        //                     Event::Paste(_) => {
+        //
+        //                     }
+        //
+        //                     Event::Resize(_, _) => {
+        //
+        //                     }
+        //                 }
+        //             }
+        //             Some(Err(e)) => println!("Error: {:?}\r", e),
+        //             None => {continue},
+        //         }
+        //     }
+        //}
     }
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
+    enable_raw_mode()?;
+
     let mut stdout = stdout();
     execute!(stdout, EnableMouseCapture)?;
 
-    async_std::task::block_on(print_events());
+    shell_loop().await;
 
-    execute!(stdout, DisableMouseCapture)
+    execute!(stdout, DisableMouseCapture)?;
+
+    disable_raw_mode()
+}
+
+fn match_char(c: char, modifier: KeyModifiers, kind: KeyEventKind, state: KeyEventState) {
+    // Change the operation according to the Modifier
+    {
+        // Case insensitivity
+        let c = c.to_ascii_lowercase();
+        if modifier == KeyModifiers::CONTROL {
+            match c {
+                'c' => {
+                    std::process::exit(0);
+                }
+
+                _ => {}
+            }
+        }
+    }
+
+    match kind {
+        KeyEventKind::Press => {}
+        KeyEventKind::Repeat => {}
+        KeyEventKind::Release => {
+            queue!(
+        stdout(),
+        Print(c)
+    ).unwrap();
+        }
+    }
+
+
+}
+
+fn trans_async() {
+
+}
+
+fn flush() {
+    stdout().flush().unwrap();
 }
