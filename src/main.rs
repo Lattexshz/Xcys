@@ -315,9 +315,6 @@ fn highlight(input: &mut str) {
     // 3: Flags
     let mut status = 0;
 
-    let mut use_temp = false;
-    let mut temp = 0;
-
     let mut d_quotation_count = 0;
 
     for i in vec {
