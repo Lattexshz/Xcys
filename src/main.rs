@@ -5,28 +5,28 @@
 mod command;
 mod error;
 
+use std::fmt::Error;
+use std::future::Future;
+use std::io::stdout;
 use std::io::Write;
-use std::{io::stdout, time::Duration};
 
-use futures::{future::FutureExt, select, StreamExt};
-use futures_timer::Delay;
-
-use crate::command::{parse_command, ParsedCommand};
-use crate::error::CommandParseError;
+use crate::command::{parse_command, BuiltinCommand, ParsedCommand};
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
 use crossterm::style::*;
 use crossterm::terminal::*;
 use crossterm::{
-    cursor::position,
-    event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent},
+    event::{Event, EventStream, KeyCode, KeyEvent},
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
 
-fn shell_loop() {
-    let mut reader = EventStream::new();
+pub enum CommandType {
+    Executable(ParsedCommand),
+    Builtin(BuiltinCommand),
+}
 
+fn shell_loop() {
     loop {
         execute!(
             stdout(),
@@ -94,11 +94,25 @@ fn shell_loop() {
                                     KeyEventKind::Repeat => {}
                                     KeyEventKind::Release => {
                                         println!();
-                                        let command = match parse_command(&input) {
-                                            Ok(c) => c,
+                                        match parse_command(&input) {
+                                            Ok(c) => match c {
+                                                CommandType::Executable(e) => match e.run() {
+                                                    Ok(_) => {}
+                                                    Err(e) => execute!(
+                                                        stdout(),
+                                                        SetForegroundColor(Color::Red),
+                                                        Print("Error: "),
+                                                        ResetColor,
+                                                        Print(e)
+                                                    )
+                                                    .unwrap(),
+                                                },
+                                                CommandType::Builtin(b) => {
+                                                    b.run();
+                                                }
+                                            },
                                             Err(_) => break 'input,
                                         };
-                                        command.run();
                                         input.clear();
                                         break 'input;
                                     }
@@ -248,46 +262,9 @@ fn shell_loop() {
 fn main() -> Result<()> {
     enable_raw_mode()?;
 
-    let mut stdout = stdout();
-    //execute!(stdout, EnableMouseCapture)?;
-
     shell_loop();
 
-    //execute!(stdout, DisableMouseCapture)?;
-
     disable_raw_mode()
-}
-
-fn match_char(
-    c: char,
-    modifier: KeyModifiers,
-    kind: KeyEventKind,
-    state: KeyEventState,
-    input: &mut String,
-) {
-    // Change the operation according to the Modifier
-    {
-        // Case insensitivity
-        let c = c.to_ascii_lowercase();
-        if modifier == KeyModifiers::CONTROL {
-            match c {
-                'c' => {
-                    std::process::exit(0);
-                }
-
-                _ => {}
-            }
-        }
-    }
-
-    match kind {
-        KeyEventKind::Press => {}
-        KeyEventKind::Repeat => {}
-        KeyEventKind::Release => {
-            input.push(c);
-            highlight(input);
-        }
-    }
 }
 
 fn highlight(input: &mut str) {
@@ -301,9 +278,6 @@ fn highlight(input: &mut str) {
     // 2: String
     // 3: Flags
     let mut status = 0;
-
-    let mut use_temp = false;
-    let mut temp = 0;
 
     let mut d_quotation_count = 0;
 

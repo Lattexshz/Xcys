@@ -33,13 +33,6 @@ impl CommandParseError {
             _error: _CommandParseError::Simple(kind),
         }
     }
-
-    pub fn kind(&self) -> ErrorKind {
-        match &self._error {
-            _CommandParseError::Simple(s) => s.clone(),
-            _CommandParseError::Custom(c) => c.0.clone(),
-        }
-    }
 }
 
 enum _CommandParseError {
