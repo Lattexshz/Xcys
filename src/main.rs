@@ -9,6 +9,7 @@ use std::fmt::Error;
 use std::future::Future;
 use std::io::stdout;
 use std::io::Write;
+use std::path::Path;
 
 use crate::command::{parse_command, BuiltinCommand, ParsedCommand};
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
@@ -37,10 +38,22 @@ fn shell_loop() {
             SetForegroundColor(Color::Yellow),
             Print(" "),
             Print(std::env::current_dir().unwrap().to_str().unwrap()),
-            Print("\n"),
             ResetColor
         )
         .unwrap();
+
+        if unsafe {GIT_ENABLED} == true {
+            execute!(
+                stdout(),
+                Print(" "),
+                SetForegroundColor(Color::Cyan),
+                Print("("),
+                Print(std::str::from_utf8(get_git_branch_name().unwrap().as_slice()).unwrap()),
+                Print(")"),
+                ResetColor
+            ).unwrap();
+        }
+        execute!(stdout(), Print("\n")).unwrap();
         execute!(stdout(), Print("$ ")).unwrap();
         let mut input = String::from("");
         let mut screen_size = crossterm::terminal::size().unwrap();
@@ -259,13 +272,72 @@ fn shell_loop() {
     }
 }
 
+pub static mut GIT_ENABLED:bool = false;
+
 fn main() -> Result<()> {
+
+    if find("git").is_ok() {
+        unsafe {
+            GIT_ENABLED = true;
+        }
+    }
+
     enable_raw_mode()?;
 
     shell_loop();
 
     disable_raw_mode()
 }
+
+fn find(program: &str) -> std::result::Result<Vec<u8>, ()> {
+    use std::process::Command;
+    let mut output = match Command::new("where").args([program]).output() {
+        Ok(o) => o,
+        Err(_) => {
+            return Err(());
+        }
+    };
+
+    if output.stdout.is_empty() {
+        return Err(());
+    }
+
+    output.stdout.remove(output.stdout.len() - 1);
+    output.stdout.remove(output.stdout.len() - 1);
+
+    Ok(output.stdout)
+}
+
+
+fn get_git_branch_name() -> std::result::Result<Vec<u8>, bool> {
+    use std::process::Command;
+    let git = Path::new(".git");
+    if git.is_dir() && !git.exists() {
+        return Err(false);
+    }
+    if unsafe { crate::GIT_ENABLED } {
+        let mut output = match Command::new("git")
+            .args(["rev-parse", "--abbrev-ref", "@"])
+            .output()
+        {
+            Ok(o) => o,
+            Err(_) => {
+                return Err(false);
+            }
+        };
+
+        if output.stdout.is_empty() {
+            return Err(false);
+        }
+
+        output.stdout.remove(output.stdout.len() - 1);
+
+        Ok(output.stdout)
+    } else {
+        Err(false)
+    }
+}
+
 
 fn highlight(input: &mut str) {
     let vec: Vec<char> = input.chars().collect();
