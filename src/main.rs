@@ -7,6 +7,8 @@ mod error;
 
 use std::io::Write;
 use std::{io::stdout, time::Duration};
+use std::fmt::Error;
+use std::future::Future;
 
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
@@ -103,7 +105,18 @@ fn shell_loop() {
                                             Ok(c) => {
                                                 match c {
                                                     CommandType::Executable(e) => {
-                                                        e.run();
+                                                        match e.run() {
+                                                            Ok(_) => {},
+                                                            Err(e) => {
+                                                                execute!(
+                                                                    stdout(),
+                                                                    SetForegroundColor(Color::Red),
+                                                                    Print("Error: "),
+                                                                    ResetColor,
+                                                                    Print(e)
+                                                                ).unwrap()
+                                                            }
+                                                        }
                                                     },
                                                     CommandType::Builtin(b) => {
                                                         b.run();

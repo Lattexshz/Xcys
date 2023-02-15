@@ -3,6 +3,10 @@ use crate::error::{CommandParseError, ErrorKind};
 use futures::io::BufReader;
 use futures::{AsyncBufReadExt, StreamExt};
 use std::process::Stdio;
+use crossterm::*;
+use crossterm::style::*;
+use std::io::stdout;
+
 use crate::CommandType;
 
 const BUILTIN_COMMAND_NAME:[&str;2] = ["cd","exit"];
@@ -16,8 +20,6 @@ pub struct ParsedCommand {
 
 impl ParsedCommand {
     fn new(command: String, subcommand: String, flags: Vec<String>) -> Self {
-        println!("{:?}",flags);
-
         Self {
             command,
             subcommand,
@@ -26,21 +28,26 @@ impl ParsedCommand {
     }
 
     #[tokio::main]
-    pub async fn run(&self) {
+    pub async fn run(&self) -> std::result::Result<(),std::io::Error>{
         use async_process::Command;
-        let mut child = if !self.subcommand.is_empty() {
+        let r_child = if !self.subcommand.is_empty() {
             Command::new(&self.command)
                 .args(self.flags.as_slice())
                 .stdout(Stdio::piped())
                 .spawn()
-                .unwrap()
         }else {
             Command::new(&self.command)
                 .arg(&self.subcommand)
                 .args(self.flags.as_slice())
                 .stdout(Stdio::piped())
                 .spawn()
-                .unwrap()
+        };
+
+        let mut child = match r_child {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(e);
+            }
         };
 
         let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
@@ -48,6 +55,8 @@ impl ParsedCommand {
         while let Some(line) = lines.next().await {
             println!("{}", line.unwrap());
         }
+
+        Ok(())
     }
 }
 
@@ -72,14 +81,18 @@ impl BuiltinCommand {
     pub async fn run(&self) {
         match self.command.as_str() {
             "cd" => {
-                println!("{} {}",&self.command, &self.subcommand);
                 let p = Path::new(&self.subcommand);
-                std::env::set_current_dir(p).unwrap();
-                match p.exists() {
-                    true => {
-
+                match std::env::set_current_dir(p) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        execute!(
+                            stdout(),
+                            SetForegroundColor(Color::Red),
+                            Print("Error: "),
+                            ResetColor,
+                            Print(e)
+                        ).unwrap();
                     }
-                    false => {}
                 }
             },
 
@@ -94,7 +107,7 @@ impl BuiltinCommand {
 }
 
 
-pub fn parse_command(original: &str) -> Result<CommandType, CommandParseError> {
+pub fn parse_command(original: &str) -> std::result::Result<CommandType, CommandParseError> {
     let command: String;
     let mut subcommand: String = String::new();
     let mut flags: Vec<String> = vec![];
