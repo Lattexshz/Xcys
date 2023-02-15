@@ -11,7 +11,7 @@ use std::{io::stdout, time::Duration};
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
 
-use crate::command::{parse_command, ParsedCommand};
+use crate::command::{parse_command, ParsedCommand, BuiltinCommand};
 use crate::error::CommandParseError;
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
 use crossterm::style::*;
@@ -23,6 +23,11 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
+
+pub enum CommandType {
+    Executable(ParsedCommand),
+    Builtin(BuiltinCommand)
+}
 
 fn shell_loop() {
     let mut reader = EventStream::new();
@@ -94,11 +99,19 @@ fn shell_loop() {
                                     KeyEventKind::Repeat => {}
                                     KeyEventKind::Release => {
                                         println!();
-                                        let command = match parse_command(&input) {
-                                            Ok(c) => c,
+                                        match parse_command(&input) {
+                                            Ok(c) => {
+                                                match c {
+                                                    CommandType::Executable(e) => {
+                                                        e.run();
+                                                    },
+                                                    CommandType::Builtin(b) => {
+                                                        b.run();
+                                                    }
+                                                }
+                                            },
                                             Err(_) => break 'input,
                                         };
-                                        command.run();
                                         input.clear();
                                         break 'input;
                                     }
