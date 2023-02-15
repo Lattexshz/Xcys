@@ -1,5 +1,5 @@
 [package]
-name = "slus"
+name = "xcys"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,3 +14,14 @@ whoami = "1.3.0"
 
 async-process = "1.6.0"
 dirs = "4.0.0"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
+
+[package.metadata.winres]
+ProductName = "XCYS"
+OriginalFilename = "xcys.exe"
+ProductVersion = "0.1.0.0"
+LegalCopyright = "Copyright © 2023"
+FileDescription = "XCYS"
+
