@@ -1,15 +1,15 @@
-use std::path::Path;
 use crate::error::{CommandParseError, ErrorKind};
+use crossterm::style::*;
+use crossterm::*;
 use futures::io::BufReader;
 use futures::{AsyncBufReadExt, StreamExt};
-use std::process::Stdio;
-use crossterm::*;
-use crossterm::style::*;
 use std::io::stdout;
+use std::path::Path;
+use std::process::Stdio;
 
 use crate::CommandType;
 
-const BUILTIN_COMMAND_NAME:[&str;2] = ["cd","exit"];
+const BUILTIN_COMMAND_NAME: [&str; 2] = ["cd", "exit"];
 
 pub struct ParsedCommand {
     pub command: String,
@@ -28,14 +28,14 @@ impl ParsedCommand {
     }
 
     #[tokio::main]
-    pub async fn run(&self) -> std::result::Result<(),std::io::Error>{
+    pub async fn run(&self) -> std::result::Result<(), std::io::Error> {
         use async_process::Command;
-        let r_child = if !self.subcommand.is_empty() {
+        let r_child = if self.subcommand.is_empty() && !self.flags.is_empty() {
             Command::new(&self.command)
                 .args(self.flags.as_slice())
                 .stdout(Stdio::piped())
                 .spawn()
-        }else {
+        } else {
             Command::new(&self.command)
                 .arg(&self.subcommand)
                 .args(self.flags.as_slice())
@@ -59,7 +59,6 @@ impl ParsedCommand {
         Ok(())
     }
 }
-
 
 pub struct BuiltinCommand {
     pub command: String,
@@ -91,24 +90,21 @@ impl BuiltinCommand {
                             Print("Error: "),
                             ResetColor,
                             Print(e)
-                        ).unwrap();
+                        )
+                        .unwrap();
                     }
                 }
-            },
+            }
 
             "exit" => {
                 std::process::exit(0);
             }
-            c => {
-
-            }
+            c => {}
         }
     }
 }
 
-
 pub fn parse_command(original: &str) -> std::result::Result<CommandType, CommandParseError> {
-    let command: String;
     let mut subcommand: String = String::new();
     let mut flags: Vec<String> = vec![];
 
@@ -116,14 +112,14 @@ pub fn parse_command(original: &str) -> std::result::Result<CommandType, Command
 
     let len = divided.len();
 
-    if len == 0 {
+    let command: String = if len == 0 {
         return Err(CommandParseError::simple(ErrorKind::Null));
     } else {
-        command = divided[0].parse().unwrap();
-    }
+        divided[0].parse().unwrap()
+    };
 
     if len >= 2 {
-        if !subcommand.starts_with('-') {
+        if !divided[1].starts_with('-') {
             subcommand = divided[1].parse().unwrap();
         }
     }
@@ -140,12 +136,15 @@ pub fn parse_command(original: &str) -> std::result::Result<CommandType, Command
         }
     }
 
-
     for i in BUILTIN_COMMAND_NAME {
         if command.to_ascii_lowercase() == i {
-            return Ok(CommandType::Builtin(BuiltinCommand::new(command, subcommand, flags)))
+            return Ok(CommandType::Builtin(BuiltinCommand::new(
+                command, subcommand, flags,
+            )));
         }
     }
 
-    Ok(CommandType::Executable(ParsedCommand::new(command, subcommand, flags)))
+    Ok(CommandType::Executable(ParsedCommand::new(
+        command, subcommand, flags,
+    )))
 }
