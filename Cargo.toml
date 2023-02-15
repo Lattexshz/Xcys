@@ -15,6 +15,9 @@ whoami = "1.3.0"
 async-process = "1.6.0"
 dirs = "4.0.0"
 
+serde = "1.0.145"
+toml = "0.7.2"
+
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1.12"
 
