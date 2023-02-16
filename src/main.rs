@@ -45,16 +45,21 @@ fn shell_loop(scheme: ColorScheme) {
         .unwrap();
 
         if unsafe { GIT_ENABLED } == true {
-            execute!(
+            match get_git_branch_name() {
+                Ok(b) => {
+                    execute!(
                 stdout(),
                 Print(" "),
                 SetForegroundColor(Color::Cyan),
                 Print("("),
-                Print(std::str::from_utf8(get_git_branch_name().unwrap().as_slice()).unwrap()),
+                Print(to_suitable_style(std::str::from_utf8(b.as_slice())).unwrap()),
                 Print(")"),
                 ResetColor
             )
-            .unwrap();
+                        .unwrap();
+                }
+                Err(_) => {}
+            }
         }
         execute!(stdout(), Print("\n")).unwrap();
         execute!(stdout(), Print("$ ")).unwrap();
