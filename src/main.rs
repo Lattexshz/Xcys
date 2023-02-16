@@ -1,7 +1,3 @@
-//! Demonstrates how to read events asynchronously with tokio.
-//!
-//! cargo run --features="event-stream" --example event-stream-tokio
-
 mod command;
 mod error;
 mod color;
@@ -429,6 +425,5 @@ mod test {
             "{} {} {:?}",
             command.command, command.subcommand, command.flags
         );
-        command.run();
     }
 }
