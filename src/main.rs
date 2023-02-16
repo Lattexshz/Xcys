@@ -52,7 +52,7 @@ fn shell_loop(scheme: ColorScheme) {
                 Print(" "),
                 SetForegroundColor(Color::Cyan),
                 Print("("),
-                Print(to_suitable_style(std::str::from_utf8(b.as_slice())).unwrap()),
+                Print(to_suitable_style(std::str::from_utf8(b.as_slice()).unwrap())),
                 Print(")"),
                 ResetColor
             )
