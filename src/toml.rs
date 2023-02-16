@@ -1,9 +1,11 @@
+use std::path::Path;
+use crossterm::style::Color;
 use crate::color::ColorScheme;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct UD {
-    pub scheme: UDColorScheme
+    pub ColorScheme: Option<UDColorScheme>
 }
 
 #[derive(Debug, Deserialize)]
@@ -16,51 +18,82 @@ pub struct UDColorScheme {
 
 
 pub struct Config {
-    scheme: ColorScheme
+    ColorScheme: ColorScheme
 }
 
 impl Config {
     pub fn load() -> Result<Self,()> {
 
+        let file_path = Path::new("./xcys.toml");
         let contents = match std::fs::read_to_string(file_path) {
-            Ok(_) => c,
-            Err(_) => Err(())
-        }
+            Ok(c) => c,
+            Err(_) => {
+                println!("Can't read");
+                return Err(());
+            }
+        };
         let decoded: UD = toml::from_str(&contents).unwrap();
 
 
         // Initialize ColorScheme
-        let scheme = match decoded.scheme {
-            None => ColorScheme::default(),
+        let scheme = match decoded.ColorScheme {
+            None => {
+                println!("Use default");
+                ColorScheme::default()
+            },
             Some(s) => {
-                let command = s.command {
+                let command = match s.command {
                     None => Color::Yellow,
-                    Some(c) => c
+                    Some(c) => get_color_from_name(&c)
                 };
-                let sub_command = s.sub_command {
+                let sub_command = match s.sub_command {
                     None => Color::White,
-                    Some(c) => c
+                    Some(c) => get_color_from_name(&c)
                 };
-                let string = s.string {
+                let string = match s.string {
                     None => Color::Green,
-                    Some(c) => c
+                    Some(c) => get_color_from_name(&c)
                 };
-                let flags = s.flags {
+                let flags = match s.flags {
                     None => Color::DarkGrey,
-                    Some(c) => c
+                    Some(c) => get_color_from_name(&c)
                 };
 
                 ColorScheme::new(command,sub_command,string,flags)
             }
-        }
+        };
 
 
         Ok(Self {
-            scheme
+            ColorScheme: scheme
         })
     }
 
     pub fn get_scheme(&self) -> ColorScheme {
-        self.scheme
+        self.ColorScheme
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            ColorScheme: ColorScheme::default()
+        }
+    }
+}
+
+fn get_color_from_name(color:&str) -> Color {
+    match color.to_ascii_lowercase().as_str() {
+        "white" => Color::White,
+        "black" => Color::Black,
+        "grey" => Color::Grey,
+        "red" => Color::Red,
+        "darkred" => Color::DarkRed,
+        "green" => Color::Green,
+        "darkgreen" => Color::DarkGreen,
+        "blue" => Color::Blue,
+        "darkblue" => Color::DarkBlue,
+        "darkgrey" => Color::DarkGrey,
+        _ => Color::White
     }
 }

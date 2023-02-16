@@ -165,7 +165,7 @@ fn shell_loop(scheme: ColorScheme) {
                                         KeyEventKind::Repeat => {}
                                         KeyEventKind::Release => {
                                             input.push(c);
-                                            highlight(&mut input);
+                                            highlight(&mut input,scheme);
                                         }
                                     }
                                     flush();
@@ -275,7 +275,14 @@ fn shell_loop(scheme: ColorScheme) {
 pub static mut GIT_ENABLED:bool = false;
 
 fn main() -> Result<()> {
-    let config = Config::load();
+    let config = match Config::load() {
+        Ok(c) => c,
+        Err(_) => {
+            println!("Not found config");
+            Config::default()
+        }
+    };
+
     if find("git").is_ok() {
         unsafe {
             GIT_ENABLED = true;
