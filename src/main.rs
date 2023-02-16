@@ -4,6 +4,8 @@
 
 mod command;
 mod error;
+mod color;
+mod toml;
 
 use std::fmt::Error;
 use std::future::Future;
@@ -21,13 +23,15 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
+use crate::color::ColorScheme;
+use crate::toml::Config;
 
 pub enum CommandType {
     Executable(ParsedCommand),
     Builtin(BuiltinCommand),
 }
 
-fn shell_loop() {
+fn shell_loop(scheme: ColorScheme) {
     loop {
         execute!(
             stdout(),
@@ -275,7 +279,7 @@ fn shell_loop() {
 pub static mut GIT_ENABLED:bool = false;
 
 fn main() -> Result<()> {
-
+    let config = Config::load();
     if find("git").is_ok() {
         unsafe {
             GIT_ENABLED = true;
@@ -284,7 +288,7 @@ fn main() -> Result<()> {
 
     enable_raw_mode()?;
 
-    shell_loop();
+    shell_loop(config.get_scheme());
 
     disable_raw_mode()
 }
@@ -339,7 +343,7 @@ fn get_git_branch_name() -> std::result::Result<Vec<u8>, bool> {
 }
 
 
-fn highlight(input: &mut str) {
+fn highlight(input: &mut str,scheme:ColorScheme) {
     let vec: Vec<char> = input.chars().collect();
     let pos = crossterm::cursor::position().unwrap();
     use crossterm::cursor::MoveTo;
@@ -378,7 +382,7 @@ fn highlight(input: &mut str) {
         match status {
             1 => queue!(
                 stdout(),
-                SetForegroundColor(Color::White),
+                SetForegroundColor(scheme.sub_command()),
                 Print(i),
                 ResetColor
             )
@@ -386,21 +390,21 @@ fn highlight(input: &mut str) {
 
             2 => queue!(
                 stdout(),
-                SetForegroundColor(Color::Green),
+                SetForegroundColor(scheme.string()),
                 Print(i),
                 ResetColor
             )
             .unwrap(),
             3 => queue!(
                 stdout(),
-                SetForegroundColor(Color::DarkGrey),
+                SetForegroundColor(scheme.flags()),
                 Print(i),
                 ResetColor
             )
             .unwrap(),
             _ => queue!(
                 stdout(),
-                SetForegroundColor(Color::Yellow),
+                SetForegroundColor(scheme.command()),
                 Print(i),
                 ResetColor
             )
