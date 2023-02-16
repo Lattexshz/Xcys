@@ -291,6 +291,19 @@ fn main() -> Result<()> {
 
     enable_raw_mode()?;
 
+    execute!(
+        stdout(),
+        Print("XCYS V"),
+        Print(env!("CARGO_PKG_VERSION")),
+        Print("\n"),
+        SetAttribute(Attribute::RapidBlink),
+        Print("The latest source code is available at "),
+        SetForegroundColor(Color::DarkBlue),
+        SetAttribute(Attribute::Underlined),
+        Print("https://github.com/Lattexshz/Xcys\n\n"),
+        SetAttribute(Attribute::Reset)
+    ).unwrap();
+
     shell_loop(config.get_scheme());
 
     disable_raw_mode()
