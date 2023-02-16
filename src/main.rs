@@ -29,15 +29,17 @@ pub enum CommandType {
 
 fn shell_loop(scheme: ColorScheme) {
     loop {
+        let path = to_suitable_style(std::env::current_dir().unwrap().to_str().unwrap());
         execute!(
             stdout(),
+            crossterm::terminal::SetTitle(&path),
             SetForegroundColor(Color::Green),
             Print(whoami::username()),
             Print("@"),
             Print(whoami::devicename()),
             SetForegroundColor(Color::Yellow),
             Print(" "),
-            Print(std::env::current_dir().unwrap().to_str().unwrap()),
+            Print(path),
             ResetColor
         )
         .unwrap();
@@ -276,10 +278,14 @@ fn shell_loop(scheme: ColorScheme) {
 pub static mut GIT_ENABLED: bool = false;
 
 fn main() -> Result<()> {
+    execute!(
+        stdout(),
+        crossterm::terminal::SetTitle("XCYS Shell")
+    ).unwrap();
+
     let config = match Config::load() {
         Ok(c) => c,
         Err(_) => {
-            println!("Not found config");
             Config::default()
         }
     };
@@ -310,6 +316,14 @@ fn main() -> Result<()> {
 
     disable_raw_mode()
 }
+
+
+fn to_suitable_style(s:&str) -> String {
+    let s = String::from(s).replace(":","").replace("\\","/");
+    s
+}
+
+
 
 fn find(program: &str) -> std::result::Result<Vec<u8>, ()> {
     use std::process::Command;
