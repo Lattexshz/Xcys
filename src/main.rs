@@ -1,6 +1,6 @@
+mod color;
 mod command;
 mod error;
-mod color;
 mod toml;
 
 use std::fmt::Error;
@@ -9,7 +9,9 @@ use std::io::stdout;
 use std::io::Write;
 use std::path::Path;
 
+use crate::color::ColorScheme;
 use crate::command::{parse_command, BuiltinCommand, ParsedCommand};
+use crate::toml::Config;
 use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
 use crossterm::style::*;
 use crossterm::terminal::*;
@@ -19,8 +21,6 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
-use crate::color::ColorScheme;
-use crate::toml::Config;
 
 pub enum CommandType {
     Executable(ParsedCommand),
@@ -42,7 +42,7 @@ fn shell_loop(scheme: ColorScheme) {
         )
         .unwrap();
 
-        if unsafe {GIT_ENABLED} == true {
+        if unsafe { GIT_ENABLED } == true {
             execute!(
                 stdout(),
                 Print(" "),
@@ -51,7 +51,8 @@ fn shell_loop(scheme: ColorScheme) {
                 Print(std::str::from_utf8(get_git_branch_name().unwrap().as_slice()).unwrap()),
                 Print(")"),
                 ResetColor
-            ).unwrap();
+            )
+            .unwrap();
         }
         execute!(stdout(), Print("\n")).unwrap();
         execute!(stdout(), Print("$ ")).unwrap();
@@ -165,7 +166,7 @@ fn shell_loop(scheme: ColorScheme) {
                                         KeyEventKind::Repeat => {}
                                         KeyEventKind::Release => {
                                             input.push(c);
-                                            highlight(&mut input,scheme);
+                                            highlight(&mut input, scheme);
                                         }
                                     }
                                     flush();
@@ -272,7 +273,7 @@ fn shell_loop(scheme: ColorScheme) {
     }
 }
 
-pub static mut GIT_ENABLED:bool = false;
+pub static mut GIT_ENABLED: bool = false;
 
 fn main() -> Result<()> {
     let config = match Config::load() {
@@ -302,7 +303,8 @@ fn main() -> Result<()> {
         SetAttribute(Attribute::Underlined),
         Print("https://github.com/Lattexshz/Xcys\n\n"),
         SetAttribute(Attribute::Reset)
-    ).unwrap();
+    )
+    .unwrap();
 
     shell_loop(config.get_scheme());
 
@@ -327,7 +329,6 @@ fn find(program: &str) -> std::result::Result<Vec<u8>, ()> {
 
     Ok(output.stdout)
 }
-
 
 fn get_git_branch_name() -> std::result::Result<Vec<u8>, bool> {
     use std::process::Command;
@@ -358,8 +359,7 @@ fn get_git_branch_name() -> std::result::Result<Vec<u8>, bool> {
     }
 }
 
-
-fn highlight(input: &mut str,scheme:ColorScheme) {
+fn highlight(input: &mut str, scheme: ColorScheme) {
     let vec: Vec<char> = input.chars().collect();
     let pos = crossterm::cursor::position().unwrap();
     use crossterm::cursor::MoveTo;

@@ -1,20 +1,20 @@
 use crossterm::style::Color;
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct ColorScheme {
     command: Color,
     sub_command: Color,
     string: Color,
-    flags: Color
+    flags: Color,
 }
 
 impl ColorScheme {
-    pub fn new(command:Color,sub_command:Color,string:Color,flags:Color) -> Self {
+    pub fn new(command: Color, sub_command: Color, string: Color, flags: Color) -> Self {
         Self {
             command,
             sub_command,
             string,
-            flags
+            flags,
         }
     }
     pub fn command(&self) -> Color {
@@ -37,7 +37,7 @@ impl Default for ColorScheme {
             command: Color::Yellow,
             sub_command: Color::White,
             string: Color::Green,
-            flags: Color::DarkGrey
+            flags: Color::DarkGrey,
         }
     }
 }

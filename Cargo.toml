@@ -2,6 +2,8 @@
 name = "xcys"
 version = "0.1.0"
 edition = "2021"
+authors = ["Lattexshz"]
+description = "Hackable Unix-like shell in Rust language"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
