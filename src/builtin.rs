@@ -3,15 +3,32 @@
 use std::path::Path;
 use std::time::SystemTime;
 
+pub fn cp(from: &Path,to: &Path) {
+    match std::fs::copy(from,to) {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("{}",e);
+        }
+    }
+}
+
 pub fn rm(p: &Path) {
-    if p.exists() && p.is_file() {
         match std::fs::remove_file(p) {
             Ok(_) => {}
             Err(e) => {
                 eprintln!("{}", e);
             }
         }
-    }
+
+}
+
+pub fn rmdir(p: &Path) {
+        match std::fs::remove_dir(p) {
+            Ok(_) => {},
+            Err(e) => {
+                eprintln!("{}",e);
+            }
+        }
 }
 
 pub fn touch(p: &Path) {

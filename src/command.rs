@@ -9,7 +9,7 @@ use std::process::Stdio;
 
 use crate::CommandType;
 
-const BUILTIN_COMMAND_NAME: [&str; 4] = ["cd", "exit","rm","touch"];
+const BUILTIN_COMMAND_NAME: [&str; 7] = ["cd", "cp", "exit","help","rm","rmdir","touch"];
 
 pub struct ParsedCommand {
     pub command: String,
@@ -96,13 +96,29 @@ impl BuiltinCommand {
                 }
             }
 
+            "cp" => {
+                if self.subcommand.len() >= 2 {
+                    crate::builtin::cp(Path::new(&self.subcommand[0]),Path::new(&self.subcommand[1]));
+                }
+            }
+
             "exit" => {
                 std::process::exit(0);
+            }
+
+            "help" => {
+
             }
 
             "rm" => {
                 for s in &self.subcommand {
                     crate::builtin::rm(Path::new(&s));
+                }
+            }
+
+            "rmdir" => {
+                for s in &self.subcommand {
+                    crate::builtin::rmdir(Path::new(&s));
                 }
             }
 

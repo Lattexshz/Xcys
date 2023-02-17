@@ -33,7 +33,7 @@ pub enum CommandType {
 fn shell_loop(scheme: ColorScheme) {
     loop {
         let path = to_suitable_style(std::env::current_dir().unwrap().to_str().unwrap());
-        execute!(
+        queue!(
             stdout(),
             crossterm::terminal::SetTitle(&path),
             SetForegroundColor(Color::Green),
@@ -50,7 +50,7 @@ fn shell_loop(scheme: ColorScheme) {
         if unsafe { GIT_ENABLED } {
             match get_git_branch_name() {
                 Ok(b) => {
-                    execute!(
+                    queue!(
                         stdout(),
                         Print(" "),
                         SetForegroundColor(Color::Cyan),
@@ -66,8 +66,10 @@ fn shell_loop(scheme: ColorScheme) {
                 Err(_) => {}
             }
         }
-        execute!(stdout(), Print("\n")).unwrap();
-        execute!(stdout(), Print("$ ")).unwrap();
+        queue!(stdout(), Print("\n")).unwrap();
+        queue!(stdout(), Print("$ ")).unwrap();
+
+        stdout().flush().unwrap();
         let mut input = String::from("");
         let mut screen_size = crossterm::terminal::size().unwrap();
         let y = crossterm::cursor::position().unwrap().1;
@@ -241,7 +243,6 @@ fn main() -> Result<()> {
         Print("XCYS V"),
         Print(env!("CARGO_PKG_VERSION")),
         Print("\n"),
-        SetAttribute(Attribute::RapidBlink),
         Print("The latest source code is available at "),
         SetForegroundColor(Color::DarkBlue),
         SetAttribute(Attribute::Underlined),
