@@ -1,6 +1,6 @@
 [package]
 name = "xcys"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Lattexshz"]
 description = "Hackable Unix-like shell in Rust language"
