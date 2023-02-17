@@ -1,3 +1,6 @@
+#![feature(file_set_times)]
+
+mod builtin;
 mod color;
 mod command;
 mod error;
@@ -10,7 +13,7 @@ use std::path::Path;
 use crate::color::ColorScheme;
 use crate::command::{parse_command, BuiltinCommand, ParsedCommand};
 use crate::toml::Config;
-use crossterm::event::{read, KeyEventKind,  KeyModifiers};
+use crossterm::event::{read, KeyEventKind, KeyModifiers};
 use crossterm::style::*;
 use crossterm::terminal::*;
 use crossterm::{
