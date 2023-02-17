@@ -26,7 +26,6 @@ impl Config {
         let contents = match std::fs::read_to_string(file_path) {
             Ok(c) => c,
             Err(_) => {
-                println!("Can't read");
                 return Err(());
             }
         };

@@ -21,6 +21,8 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
 };
+use octocrab::models::repos::Tag;
+use octocrab::Page;
 
 pub enum CommandType {
     Executable(ParsedCommand),
@@ -48,15 +50,17 @@ fn shell_loop(scheme: ColorScheme) {
             match get_git_branch_name() {
                 Ok(b) => {
                     execute!(
-                stdout(),
-                Print(" "),
-                SetForegroundColor(Color::Cyan),
-                Print("("),
-                Print(to_suitable_style(std::str::from_utf8(b.as_slice()).unwrap())),
-                Print(")"),
-                ResetColor
-            )
-                        .unwrap();
+                        stdout(),
+                        Print(" "),
+                        SetForegroundColor(Color::Cyan),
+                        Print("("),
+                        Print(to_suitable_style(
+                            std::str::from_utf8(b.as_slice()).unwrap()
+                        )),
+                        Print(")"),
+                        ResetColor
+                    )
+                    .unwrap();
                 }
                 Err(_) => {}
             }
@@ -283,16 +287,14 @@ fn shell_loop(scheme: ColorScheme) {
 pub static mut GIT_ENABLED: bool = false;
 
 fn main() -> Result<()> {
-    execute!(
-        stdout(),
-        crossterm::terminal::SetTitle("XCYS Shell")
-    ).unwrap();
+    execute!(stdout(), crossterm::terminal::SetTitle("XCYS Shell")).unwrap();
+
+    let tag = get_version();
+    let version = &tag.items[0].name;
 
     let config = match Config::load() {
         Ok(c) => c,
-        Err(_) => {
-            Config::default()
-        }
+        Err(_) => Config::default(),
     };
 
     if find("git").is_ok() {
@@ -317,18 +319,40 @@ fn main() -> Result<()> {
     )
     .unwrap();
 
+    if version != env!("CARGO_PKG_VERSION") {
+        execute!(
+            stdout(),
+            SetAttribute(Attribute::RapidBlink),
+            SetForegroundColor(Color::Yellow),
+            Print("New version now available! "),
+            SetForegroundColor(Color::DarkBlue),
+            SetAttribute(Attribute::Underlined),
+            Print("https://github.com/Lattexshz/Xcys/releases/"),
+            Print(version),
+            Print("\n\n"),
+            SetAttribute(Attribute::Reset)
+        ).unwrap();
+    }
+
     shell_loop(config.get_scheme());
 
     disable_raw_mode()
 }
 
-
-fn to_suitable_style(s:&str) -> String {
-    let s = String::from(s).replace(":","").replace("\\","/");
-    s
+#[tokio::main]
+async fn get_version() -> Page<Tag> {
+    let t = octocrab::instance()
+        .repos("Lattexshz", "Xcys")
+        .list_tags()
+        .send()
+        .await;
+    t.unwrap()
 }
 
-
+fn to_suitable_style(s: &str) -> String {
+    let s = String::from(s).replace(":", "").replace("\\", "/");
+    s
+}
 
 fn find(program: &str) -> std::result::Result<Vec<u8>, ()> {
     use std::process::Command;
