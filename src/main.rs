@@ -411,12 +411,20 @@ fn flush() {
 }
 
 mod test {
+    use crate::CommandType;
+
     #[test]
     fn parse_command() {
         let command = crate::command::parse_command("cargo check").unwrap();
-        println!(
-            "{} {} {:?}",
-            command.command, command.subcommand, command.flags
-        );
+
+        match command {
+            CommandType::Executable(command) => {
+                println!(
+                    "{} {:?} {:?}",
+                    command.command, command.subcommand, command.flags
+                );
+            }
+            CommandType::Builtin(_) => {}
+        }
     }
 }
