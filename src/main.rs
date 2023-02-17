@@ -71,7 +71,7 @@ fn shell_loop(scheme: ColorScheme) {
 
         stdout().flush().unwrap();
         let mut input = String::from("");
-        let mut screen_size = crossterm::terminal::size().unwrap();
+        let screen_size = crossterm::terminal::size().unwrap();
         let y = crossterm::cursor::position().unwrap().1;
         'input: loop {
             let event = read().unwrap();
@@ -86,7 +86,7 @@ fn shell_loop(scheme: ColorScheme) {
                         code,
                         modifiers,
                         kind,
-                        state,
+                        ..
                     } => {
                         if kind == KeyEventKind::Release {
                             match code {
@@ -415,7 +415,7 @@ fn flush() {
 }
 
 mod test {
-    use crate::CommandType;
+    use super::*;
 
     #[test]
     fn parse_command() {
