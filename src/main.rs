@@ -1,3 +1,6 @@
+#![feature(file_set_times)]
+
+mod builtin;
 mod color;
 mod command;
 mod error;
@@ -10,7 +13,7 @@ use std::path::Path;
 use crate::color::ColorScheme;
 use crate::command::{parse_command, BuiltinCommand, ParsedCommand};
 use crate::toml::Config;
-use crossterm::event::{read, KeyEventKind,  KeyModifiers};
+use crossterm::event::{read, KeyEventKind, KeyModifiers};
 use crossterm::style::*;
 use crossterm::terminal::*;
 use crossterm::{
@@ -30,7 +33,7 @@ pub enum CommandType {
 fn shell_loop(scheme: ColorScheme) {
     loop {
         let path = to_suitable_style(std::env::current_dir().unwrap().to_str().unwrap());
-        execute!(
+        queue!(
             stdout(),
             crossterm::terminal::SetTitle(&path),
             SetForegroundColor(Color::Green),
@@ -47,7 +50,7 @@ fn shell_loop(scheme: ColorScheme) {
         if unsafe { GIT_ENABLED } {
             match get_git_branch_name() {
                 Ok(b) => {
-                    execute!(
+                    queue!(
                         stdout(),
                         Print(" "),
                         SetForegroundColor(Color::Cyan),
@@ -63,10 +66,12 @@ fn shell_loop(scheme: ColorScheme) {
                 Err(_) => {}
             }
         }
-        execute!(stdout(), Print("\n")).unwrap();
-        execute!(stdout(), Print("$ ")).unwrap();
+        queue!(stdout(), Print("\n")).unwrap();
+        queue!(stdout(), Print("$ ")).unwrap();
+
+        stdout().flush().unwrap();
         let mut input = String::from("");
-        let mut screen_size = crossterm::terminal::size().unwrap();
+        let screen_size = crossterm::terminal::size().unwrap();
         let y = crossterm::cursor::position().unwrap().1;
         'input: loop {
             let event = read().unwrap();
@@ -81,7 +86,7 @@ fn shell_loop(scheme: ColorScheme) {
                         code,
                         modifiers,
                         kind,
-                        state,
+                        ..
                     } => {
                         if kind == KeyEventKind::Release {
                             match code {
@@ -238,7 +243,6 @@ fn main() -> Result<()> {
         Print("XCYS V"),
         Print(env!("CARGO_PKG_VERSION")),
         Print("\n"),
-        SetAttribute(Attribute::RapidBlink),
         Print("The latest source code is available at "),
         SetForegroundColor(Color::DarkBlue),
         SetAttribute(Attribute::Underlined),
@@ -411,12 +415,20 @@ fn flush() {
 }
 
 mod test {
+    use super::*;
+
     #[test]
     fn parse_command() {
         let command = crate::command::parse_command("cargo check").unwrap();
-        println!(
-            "{} {} {:?}",
-            command.command, command.subcommand, command.flags
-        );
+
+        match command {
+            CommandType::Executable(command) => {
+                println!(
+                    "{} {:?} {:?}",
+                    command.command, command.subcommand, command.flags
+                );
+            }
+            CommandType::Builtin(_) => {}
+        }
     }
 }

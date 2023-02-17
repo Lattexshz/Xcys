@@ -9,17 +9,17 @@ use std::process::Stdio;
 
 use crate::CommandType;
 
-const BUILTIN_COMMAND_NAME: [&str; 2] = ["cd", "exit"];
+const BUILTIN_COMMAND_NAME: [&str; 7] = ["cd", "cp", "exit", "help", "rm", "rmdir", "touch"];
 
 pub struct ParsedCommand {
     pub command: String,
-    pub subcommand: String,
+    pub subcommand: Vec<String>,
 
     pub flags: Vec<String>,
 }
 
 impl ParsedCommand {
-    fn new(command: String, subcommand: String, flags: Vec<String>) -> Self {
+    fn new(command: String, subcommand: Vec<String>, flags: Vec<String>) -> Self {
         Self {
             command,
             subcommand,
@@ -37,7 +37,7 @@ impl ParsedCommand {
                 .spawn()
         } else {
             Command::new(&self.command)
-                .arg(&self.subcommand)
+                .args(self.subcommand.as_slice())
                 .args(self.flags.as_slice())
                 .stdout(Stdio::piped())
                 .spawn()
@@ -62,13 +62,13 @@ impl ParsedCommand {
 
 pub struct BuiltinCommand {
     pub command: String,
-    pub subcommand: String,
+    pub subcommand: Vec<String>,
 
     pub flags: Vec<String>,
 }
 
 impl BuiltinCommand {
-    fn new(command: String, subcommand: String, flags: Vec<String>) -> Self {
+    fn new(command: String, subcommand: Vec<String>, flags: Vec<String>) -> Self {
         Self {
             command,
             subcommand,
@@ -80,7 +80,7 @@ impl BuiltinCommand {
     pub async fn run(&self) {
         match self.command.as_str() {
             "cd" => {
-                let p = Path::new(&self.subcommand);
+                let p = Path::new(&self.subcommand[0]);
                 match std::env::set_current_dir(p) {
                     Ok(_) => {}
                     Err(e) => {
@@ -96,19 +96,49 @@ impl BuiltinCommand {
                 }
             }
 
+            "cp" => {
+                if self.subcommand.len() >= 2 {
+                    crate::builtin::cp(
+                        Path::new(&self.subcommand[0]),
+                        Path::new(&self.subcommand[1]),
+                    );
+                }
+            }
+
             "exit" => {
                 std::process::exit(0);
             }
-            c => {}
+
+            "help" => {}
+
+            "rm" => {
+                for s in &self.subcommand {
+                    crate::builtin::rm(Path::new(&s));
+                }
+            }
+
+            "rmdir" => {
+                for s in &self.subcommand {
+                    crate::builtin::rmdir(Path::new(&s));
+                }
+            }
+
+            "touch" => {
+                for s in &self.subcommand {
+                    crate::builtin::touch(Path::new(&s));
+                }
+            }
+
+            _ => {}
         }
     }
 }
 
 pub fn parse_command(original: &str) -> std::result::Result<CommandType, CommandParseError> {
-    let mut subcommand: String = String::new();
+    let mut subcommand: Vec<String> = vec![];
     let mut flags: Vec<String> = vec![];
 
-    let divided: Vec<&str> = original.split_ascii_whitespace().collect();
+    let mut divided: Vec<&str> = original.split_ascii_whitespace().collect();
 
     let len = divided.len();
 
@@ -117,22 +147,13 @@ pub fn parse_command(original: &str) -> std::result::Result<CommandType, Command
     } else {
         divided[0].parse().unwrap()
     };
+    divided.remove(0);
 
-    if len >= 2 {
-        if !divided[1].starts_with('-') {
-            subcommand = divided[1].parse().unwrap();
-        }
-    }
-
-    let mut flags_counted = false;
     for i in divided {
-        if flags_counted {
+        if i.starts_with('-') {
             flags.push(i.parse().unwrap());
         } else {
-            if i.starts_with('-') {
-                flags.push(i.parse().unwrap());
-                flags_counted = true;
-            }
+            subcommand.push(i.parse().unwrap());
         }
     }
 
