@@ -3,8 +3,6 @@ mod command;
 mod error;
 mod toml;
 
-use std::fmt::Error;
-use std::future::Future;
 use std::io::stdout;
 use std::io::Write;
 use std::path::Path;
@@ -12,11 +10,11 @@ use std::path::Path;
 use crate::color::ColorScheme;
 use crate::command::{parse_command, BuiltinCommand, ParsedCommand};
 use crate::toml::Config;
-use crossterm::event::{read, KeyEventKind, KeyEventState, KeyModifiers};
+use crossterm::event::{read, KeyEventKind,  KeyModifiers};
 use crossterm::style::*;
 use crossterm::terminal::*;
 use crossterm::{
-    event::{Event, EventStream, KeyCode, KeyEvent},
+    event::{Event, KeyCode, KeyEvent},
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
     Result,
@@ -46,7 +44,7 @@ fn shell_loop(scheme: ColorScheme) {
         )
         .unwrap();
 
-        if unsafe { GIT_ENABLED } == true {
+        if unsafe { GIT_ENABLED } {
             match get_git_branch_name() {
                 Ok(b) => {
                     execute!(
@@ -232,7 +230,6 @@ fn main() -> Result<()> {
         }
     }
 
-
     // Run shell
     enable_raw_mode()?;
 
@@ -263,7 +260,8 @@ fn main() -> Result<()> {
             Print(version),
             Print("\n\n"),
             SetAttribute(Attribute::Reset)
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     shell_loop(config.get_scheme());
@@ -283,8 +281,7 @@ async fn get_version() -> Page<Tag> {
 }
 
 fn to_suitable_style(s: &str) -> String {
-    let s = String::from(s).replace(":", "").replace("\\", "/");
-    s
+    String::from(s).replace(':', "").replace('\\', "/")
 }
 
 fn find(program: &str) -> std::result::Result<Vec<u8>, ()> {
