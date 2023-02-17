@@ -206,81 +206,6 @@ fn shell_loop(scheme: ColorScheme) {
             }
         }
         println!();
-        println!();
-
-        // let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
-        // let mut event = reader.next().fuse();
-        //
-        //     select! {
-        //     //_ = delay => { println!(".\r"); },
-        //     maybe_event = event => {
-        //         match maybe_event {
-        //             Some(Ok(event)) => {
-        //                 match event {
-        //                     Event::FocusGained => {
-        //
-        //                     }
-        //
-        //                     Event::FocusLost => {
-        //
-        //                     }
-        //
-        //                     Event::Key(key) => {
-        //                         match key {
-        //                             KeyEvent {code,modifiers,kind,state} => {
-        //                                 match code {
-        //                                     KeyCode::Backspace => {},
-        //                                     KeyCode::Enter => {},
-        //                                     KeyCode::Left => {},
-        //                                     KeyCode::Right => {},
-        //                                     KeyCode::Up => {},
-        //                                     KeyCode::Down => {},
-        //                                     KeyCode::Home => {},
-        //                                     KeyCode::End => {},
-        //                                     KeyCode::PageUp => {},
-        //                                     KeyCode::PageDown => {},
-        //                                     KeyCode::Tab => {},
-        //                                     KeyCode::BackTab => {},
-        //                                     KeyCode::Delete => {},
-        //                                     KeyCode::Insert => {break;},
-        //                                     KeyCode::F(_) => {},
-        //                                     KeyCode::Char(c) => {
-        //                                         match_char(c,modifiers,kind,state);
-        //                                     },
-        //                                     KeyCode::Null => {},
-        //                                     KeyCode::Esc => {},
-        //                                     KeyCode::CapsLock => {},
-        //                                     KeyCode::ScrollLock => {},
-        //                                     KeyCode::NumLock => {},
-        //                                     KeyCode::PrintScreen => {},
-        //                                     KeyCode::Menu => {},
-        //                                     KeyCode::KeypadBegin => {},
-        //                                     KeyCode::Pause => {},
-        //                                     KeyCode::Media(_) => {},
-        //                                     KeyCode::Modifier(_) => {},
-        //                                 }
-        //                             }
-        //                         }
-        //                     }
-        //
-        //                     Event::Mouse(_) => {
-        //
-        //                     }
-        //
-        //                     Event::Paste(_) => {
-        //
-        //                     }
-        //
-        //                     Event::Resize(_, _) => {
-        //
-        //                     }
-        //                 }
-        //             }
-        //             Some(Err(e)) => println!("Error: {:?}\r", e),
-        //             None => {continue},
-        //         }
-        //     }
-        //}
     }
 }
 
@@ -289,20 +214,26 @@ pub static mut GIT_ENABLED: bool = false;
 fn main() -> Result<()> {
     execute!(stdout(), crossterm::terminal::SetTitle("XCYS Shell")).unwrap();
 
+    // Get Latest release name.
     let tag = get_version();
     let version = &tag.items[0].name;
 
+    // Load config
     let config = match Config::load() {
         Ok(c) => c,
         Err(_) => Config::default(),
     };
 
+    // Find out if Git is available. If not available,
+    // do not display the branch name (this has the effect of eliminating wasteful processing!)
     if find("git").is_ok() {
         unsafe {
             GIT_ENABLED = true;
         }
     }
 
+
+    // Run shell
     enable_raw_mode()?;
 
     execute!(
@@ -319,6 +250,7 @@ fn main() -> Result<()> {
     )
     .unwrap();
 
+    // Notify updates when the current version does not match the latest version
     if version != env!("CARGO_PKG_VERSION") {
         execute!(
             stdout(),
@@ -340,6 +272,7 @@ fn main() -> Result<()> {
 }
 
 #[tokio::main]
+// Get latest release from GitHub
 async fn get_version() -> Page<Tag> {
     let t = octocrab::instance()
         .repos("Lattexshz", "Xcys")
