@@ -3,7 +3,7 @@ use crossterm::style::*;
 use crossterm::*;
 use futures::io::BufReader;
 use futures::{AsyncBufReadExt, StreamExt};
-use std::io::stdout;
+use std::io::{stdout, Write};
 use std::path::Path;
 use std::process::Stdio;
 
@@ -109,7 +109,18 @@ impl BuiltinCommand {
                 std::process::exit(0);
             }
 
-            "help" => {}
+            "help" => {
+                queue!(
+                    stdout(),
+                    Print("XCYS V"),
+                    Print(env!("CARGO_PKG_VERSION")),
+                    Print("\n"),
+                    Print("Hackable Unix-like shell in Rust language\n"),
+                    Print("XCYS is open source project\n"),
+                    Print("Source is available at https://github.com/Lattexshz/Xcys\n")
+                ).unwrap();
+                stdout().flush().unwrap();
+            }
 
             "rm" => {
                 for s in &self.subcommand {
