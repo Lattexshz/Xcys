@@ -285,7 +285,15 @@ async fn get_version() -> Page<Tag> {
 }
 
 fn to_suitable_style(s: &str) -> String {
-    String::from(s).replace(':', "").replace('\\', "/")
+    if s == dirs::home_dir().unwrap().to_str().unwrap() {
+        return "~".parse().unwrap();
+    }
+    let mut s = String::from(s).replace(':', "");
+    if s.starts_with('C') {
+        s.remove(0);
+        s.insert(0,'c');
+    }
+    s.replace('\\', "/")
 }
 
 fn find(program: &str) -> std::result::Result<Vec<u8>, ()> {

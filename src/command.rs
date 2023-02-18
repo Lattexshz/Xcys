@@ -80,7 +80,14 @@ impl BuiltinCommand {
     pub async fn run(&self) {
         match self.command.as_str() {
             "cd" => {
-                let p = Path::new(&self.subcommand[0]);
+
+                let p = {
+                    if self.subcommand.len() == 0 {
+                        dirs::home_dir().unwrap()
+                    }else {
+                        Path::new(&self.subcommand[0]).to_path_buf()
+                    }
+                };
                 match std::env::set_current_dir(p) {
                     Ok(_) => {}
                     Err(e) => {
