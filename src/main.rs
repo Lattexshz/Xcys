@@ -291,7 +291,7 @@ fn to_suitable_style(s: &str) -> String {
     let mut s = String::from(s).replace(':', "");
     if s.starts_with('C') {
         s.remove(0);
-        s.insert(0,'c');
+        s.insert(0, 'c');
     }
     s.replace('\\', "/")
 }

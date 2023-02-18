@@ -80,11 +80,10 @@ impl BuiltinCommand {
     pub async fn run(&self) {
         match self.command.as_str() {
             "cd" => {
-
                 let p = {
                     if self.subcommand.len() == 0 {
                         dirs::home_dir().unwrap()
-                    }else {
+                    } else {
                         Path::new(&self.subcommand[0]).to_path_buf()
                     }
                 };
@@ -125,7 +124,8 @@ impl BuiltinCommand {
                     Print("Hackable Unix-like shell in Rust language\n"),
                     Print("XCYS is open source project\n"),
                     Print("Source is available at https://github.com/Lattexshz/Xcys\n")
-                ).unwrap();
+                )
+                .unwrap();
                 stdout().flush().unwrap();
             }
 
